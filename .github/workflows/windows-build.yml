@@ -11,7 +11,8 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    # Das Projekt verwendet ausdrücklich den CMake-Generator Visual Studio 17 2022.
+    runs-on: windows-2022
     timeout-minutes: 45
 
     steps:
