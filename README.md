@@ -4,7 +4,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)
 ![License](https://img.shields.io/badge/license-MIT-6f42c1)
 
-![Klanggeist Lyrics Studio](assets/KlanggeistLyricsStudio-icon-preview.png)
+![Klanggeist Lyrics Studio](assets/KlanggeistLyricsStudio.png)
 
 Klanggeist Lyrics Studio ist eine lokale Windows-Anwendung für den vollständigen Weg von einer Audio- oder Videodatei bis zum fertigen Lyrics-Musikvideo:
 
