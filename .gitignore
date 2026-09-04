@@ -1,0 +1,36 @@
+# Build and package output
+/build/
+/dist/
+/out/
+/.vs/
+*.user
+*.suo
+*.VC.db
+*.wixpdb
+*.msi
+*.zip
+
+# Local runtime state and downloaded models
+/.hf/
+**/.hf/
+/lyrics/
+/videos/
+klanggeist_studio.json
+tatarus_visual_brain.json
+*.lyrics.tmp.ass
+*.tmp.mp4
+
+# Python caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# The full patched FFmpeg source is published as a release asset.
+# Only the reproducible patch is tracked in this repository.
+/vendor/
+
+# Editor and operating-system noise
+.DS_Store
+Thumbs.db
+Desktop.ini

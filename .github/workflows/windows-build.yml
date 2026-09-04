@@ -1,0 +1,47 @@
+name: Windows build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.12 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: .NET einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: WiX Toolset installieren
+        shell: pwsh
+        run: dotnet tool install --global wix --version 7.0.0
+
+      - name: Portable und MSI bauen
+        shell: pwsh
+        run: .\BUILD_RELEASE.ps1 -Version 2.1.1
+
+      - name: Release-Pakete als Workflow-Artefakt sichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: KlanggeistLyricsStudio-2.1.1-windows
+          path: |
+            dist/KlanggeistLyricsStudio-2.1.1-portable.zip
+            dist/KlanggeistLyricsStudio-2.1.1-x64.msi
+            dist/SHA256SUMS.txt
+          if-no-files-found: error

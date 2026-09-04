@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+      Name="Klanggeist Lyrics Studio"
+      Manufacturer="Klanggeist"
+      Version="$(var.ProductVersion)"
+      Language="1031"
+      UpgradeCode="{C3ECC085-3D12-415B-8421-7F238836C520}"
+      Scope="perUser"
+      InstallerVersion="500"
+      Compressed="yes">
+
+    <SummaryInformation Description="Klanggeist Lyrics Studio Installer" Manufacturer="Klanggeist" />
+    <MajorUpgrade
+        DowngradeErrorMessage="Eine neuere Version von Klanggeist Lyrics Studio ist bereits installiert." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="KlanggeistAppIcon" SourceFile="$(var.ProjectDir)\assets\KlanggeistLyricsStudio.ico" />
+    <Property Id="ARPPRODUCTICON" Value="KlanggeistAppIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/kruemmel-python/LyricsStudio" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/kruemmel-python/LyricsStudio" />
+    <Property Id="ARPCONTACT" Value="Klanggeist" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="Klanggeist Lyrics Studio">
+          <Directory Id="BackendFolder" Name="backend" />
+          <Directory Id="AssetsFolder" Name="assets" />
+          <Directory Id="PresetsFolder" Name="presets" />
+          <Directory Id="ToolsFolder" Name="tools">
+            <Directory Id="LicensesFolder" Name="licenses">
+              <Directory Id="FfmpegLicensesFolder" Name="ffmpeg" />
+              <Directory Id="RuntimeLicensesFolder" Name="runtime" />
+            </Directory>
+          </Directory>
+          <Directory Id="DocsFolder" Name="docs" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Klanggeist Lyrics Studio" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="MainFeature" Title="Klanggeist Lyrics Studio" Level="1">
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentRef Id="StartMenuShortcuts" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="ApplicationFiles">
+      <Component Id="MainApplicationFiles" Directory="INSTALLFOLDER" Guid="{C17EF2BF-738F-4AE4-BA3C-9E7E246BE4F1}">
+        <File Id="KlanggeistLyricsStudioExe" Source="$(var.ReleaseDir)\KlanggeistLyricsStudio.exe" />
+        <File Id="RequirementsTxt" Source="$(var.ReleaseDir)\requirements.txt" />
+        <File Id="InstallBackendBat" Source="$(var.ReleaseDir)\INSTALL_BACKEND.bat" />
+        <File Id="ReadmeMd" Source="$(var.ReleaseDir)\README.md" />
+        <File Id="ProjectLicense" Source="$(var.ReleaseDir)\LICENSE" />
+        <File Id="ThirdPartyNotices" Source="$(var.ReleaseDir)\THIRD_PARTY_NOTICES.md" />
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RemoveFolder Id="RemoveLocalProgramsFolder" Directory="LocalProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="MainFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="DocumentationFiles" Directory="DocsFolder" Guid="{0C2F52B7-D5C9-4B26-85B5-E1E20576B984}">
+        <File Id="ManualMd" Source="$(var.ReleaseDir)\docs\HANDBUCH.md" />
+        <File Id="TatarusMd" Source="$(var.ReleaseDir)\docs\TATARUS.md" />
+        <File Id="ArchitectureMd" Source="$(var.ReleaseDir)\docs\ARCHITEKTUR.md" />
+        <File Id="BuildMd" Source="$(var.ReleaseDir)\docs\BUILD.md" />
+        <File Id="FfmpegMd" Source="$(var.ReleaseDir)\docs\FFMPEG.md" />
+        <File Id="ChangelogMd" Source="$(var.ReleaseDir)\docs\CHANGELOG.md" />
+        <File Id="ValidationMd" Source="$(var.ReleaseDir)\docs\VALIDATION.md" />
+        <RemoveFolder Id="RemoveDocsFolder" Directory="DocsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="DocumentationFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="BackendFiles" Directory="BackendFolder" Guid="{E6520728-87FB-43BE-83AD-DF27F90031BF}">
+        <File Id="WhisperWorkerPy" Source="$(var.ReleaseDir)\backend\whisper_worker.py" />
+        <RemoveFolder Id="RemoveBackendFolder" Directory="BackendFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="BackendFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="AssetFiles" Directory="AssetsFolder" Guid="{A721D7B3-1737-4AE8-80AB-278181972241}">
+        <File Id="AssetIconPreview" Source="$(var.ReleaseDir)\assets\KlanggeistLyricsStudio-icon-preview.png" />
+        <File Id="AssetMaster" Source="$(var.ReleaseDir)\assets\KlanggeistLyricsStudio-master.png" />
+        <File Id="AssetIcon" Source="$(var.ReleaseDir)\assets\KlanggeistLyricsStudio.ico" />
+        <File Id="AssetPng" Source="$(var.ReleaseDir)\assets\KlanggeistLyricsStudio.png" />
+        <RemoveFolder Id="RemoveAssetsFolder" Directory="AssetsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="AssetFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="PresetFiles" Directory="PresetsFolder" Guid="{BC9BE2E4-255B-4859-B5FD-7C39AD4949F6}">
+        <File Id="LyricsVideoPreset" Name="Klanggeist Lyrics Video.json" Source="$(var.ReleaseDir)\presets\Klanggeist Lyrics Video.json" />
+        <RemoveFolder Id="RemovePresetsFolder" Directory="PresetsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="PresetFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="FfmpegToolFiles" Directory="ToolsFolder" Guid="{203CA331-4529-44DA-804B-AA643086A448}">
+        <File Id="FfmpegExe" Source="$(var.ReleaseDir)\tools\ffmpeg.exe" />
+        <File Id="FfmpegReuseMarker" Source="$(var.ReleaseDir)\tools\klanggeist-ffmpeg.reuse" />
+        <File Id="LibAssDll" Source="$(var.ReleaseDir)\tools\libass-9.dll" />
+        <File Id="LibBrotliCommonDll" Source="$(var.ReleaseDir)\tools\libbrotlicommon.dll" />
+        <File Id="LibBrotliDecDll" Source="$(var.ReleaseDir)\tools\libbrotlidec.dll" />
+        <File Id="LibBz2Dll" Source="$(var.ReleaseDir)\tools\libbz2-1.dll" />
+        <File Id="LibExpatDll" Source="$(var.ReleaseDir)\tools\libexpat-1.dll" />
+        <File Id="LibFontconfigDll" Source="$(var.ReleaseDir)\tools\libfontconfig-1.dll" />
+        <File Id="LibFreetypeDll" Source="$(var.ReleaseDir)\tools\libfreetype-6.dll" />
+        <File Id="LibFribidiDll" Source="$(var.ReleaseDir)\tools\libfribidi-0.dll" />
+        <File Id="LibGccDll" Source="$(var.ReleaseDir)\tools\libgcc_s_seh-1.dll" />
+        <File Id="LibGlibDll" Source="$(var.ReleaseDir)\tools\libglib-2.0-0.dll" />
+        <File Id="LibGraphiteDll" Source="$(var.ReleaseDir)\tools\libgraphite2.dll" />
+        <File Id="LibHarfbuzzDll" Source="$(var.ReleaseDir)\tools\libharfbuzz-0.dll" />
+        <File Id="LibIconvDll" Source="$(var.ReleaseDir)\tools\libiconv-2.dll" />
+        <File Id="LibIntlDll" Source="$(var.ReleaseDir)\tools\libintl-8.dll" />
+        <File Id="LibPcre2Dll" Source="$(var.ReleaseDir)\tools\libpcre2-8-0.dll" />
+        <File Id="LibPngDll" Source="$(var.ReleaseDir)\tools\libpng16-16.dll" />
+        <File Id="LibStdCppDll" Source="$(var.ReleaseDir)\tools\libstdc++-6.dll" />
+        <File Id="LibUnibreakDll" Source="$(var.ReleaseDir)\tools\libunibreak-7.dll" />
+        <File Id="LibWinpthreadDll" Source="$(var.ReleaseDir)\tools\libwinpthread-1.dll" />
+        <File Id="LibX264Dll" Source="$(var.ReleaseDir)\tools\libx264-165.dll" />
+        <File Id="ZlibDll" Source="$(var.ReleaseDir)\tools\zlib1.dll" />
+        <RemoveFolder Id="RemoveToolsFolder" Directory="ToolsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="FfmpegToolFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="FfmpegLicenseFiles" Directory="FfmpegLicensesFolder" Guid="{6DBDD62E-F633-4842-99AB-E36B27507416}">
+        <File Id="LicenseGpl2" Source="$(var.ReleaseDir)\tools\licenses\ffmpeg\COPYING.GPLv2" />
+        <File Id="LicenseGpl3" Source="$(var.ReleaseDir)\tools\licenses\ffmpeg\COPYING.GPLv3" />
+        <File Id="LicenseLgpl21" Source="$(var.ReleaseDir)\tools\licenses\ffmpeg\COPYING.LGPLv2.1" />
+        <File Id="LicenseLgpl3" Source="$(var.ReleaseDir)\tools\licenses\ffmpeg\COPYING.LGPLv3" />
+        <RemoveFolder Id="RemoveFfmpegLicensesFolder" Directory="FfmpegLicensesFolder" On="uninstall" />
+        <RemoveFolder Id="RemoveLicensesFolder" Directory="LicensesFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="FfmpegLicenseFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <Component Id="RuntimeLicenseFiles" Directory="RuntimeLicensesFolder" Guid="{8D73772A-D35F-4660-A692-5DF302C3F3F5}">
+        <File Id="BrotliLicense" Source="$(var.ReleaseDir)\tools\licenses\runtime\brotli-LICENSE" />
+        <File Id="Bzip2License" Source="$(var.ReleaseDir)\tools\licenses\runtime\bzip2-LICENSE" />
+        <File Id="ExpatCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\expat-COPYING" />
+        <File Id="FontconfigCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\fontconfig-COPYING" />
+        <File Id="FreetypeFtl" Source="$(var.ReleaseDir)\tools\licenses\runtime\freetype-FTL.TXT" />
+        <File Id="FreetypeGpl2" Source="$(var.ReleaseDir)\tools\licenses\runtime\freetype-GPLv2.TXT" />
+        <File Id="FribidiCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\fribidi-COPYING" />
+        <File Id="GccLibsCopyingLib" Source="$(var.ReleaseDir)\tools\licenses\runtime\gcc-libs-COPYING.LIB" />
+        <File Id="GccLibsCopyingRuntime" Source="$(var.ReleaseDir)\tools\licenses\runtime\gcc-libs-COPYING.RUNTIME" />
+        <File Id="GccLibsCopying3" Source="$(var.ReleaseDir)\tools\licenses\runtime\gcc-libs-COPYING3" />
+        <File Id="GccLibsReadme" Source="$(var.ReleaseDir)\tools\licenses\runtime\gcc-libs-README" />
+        <File Id="GettextRuntimeCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\gettext-runtime-COPYING" />
+        <File Id="GettextRuntimeIntlCopyingLib" Source="$(var.ReleaseDir)\tools\licenses\runtime\gettext-runtime-intl-COPYING.LIB" />
+        <File Id="GettextRuntimeLibasprintfCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\gettext-runtime-libasprintf-COPYING" />
+        <File Id="GettextRuntimeLibasprintfCopyingLib" Source="$(var.ReleaseDir)\tools\licenses\runtime\gettext-runtime-libasprintf-COPYING.LIB" />
+        <File Id="Glib2Copying" Source="$(var.ReleaseDir)\tools\licenses\runtime\glib2-COPYING" />
+        <File Id="Graphite2Copying" Source="$(var.ReleaseDir)\tools\licenses\runtime\graphite2-COPYING" />
+        <File Id="Graphite2License" Source="$(var.ReleaseDir)\tools\licenses\runtime\graphite2-LICENSE" />
+        <File Id="HarfbuzzCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\harfbuzz-COPYING" />
+        <File Id="LibassCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\libass-COPYING" />
+        <File Id="LibiconvCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\libiconv-COPYING" />
+        <File Id="LibiconvCopyingLib" Source="$(var.ReleaseDir)\tools\licenses\runtime\libiconv-COPYING.LIB" />
+        <File Id="LibiconvLibcharsetCopyingLib" Source="$(var.ReleaseDir)\tools\licenses\runtime\libiconv-libcharset-COPYING.LIB" />
+        <File Id="LibiconvReadme" Source="$(var.ReleaseDir)\tools\licenses\runtime\libiconv-README" />
+        <File Id="LibpngLicense" Source="$(var.ReleaseDir)\tools\licenses\runtime\libpng-LICENSE" />
+        <File Id="LibunibreakLicence" Source="$(var.ReleaseDir)\tools\licenses\runtime\libunibreak-LICENCE" />
+        <File Id="Pcre2Copying" Source="$(var.ReleaseDir)\tools\licenses\runtime\pcre2-COPYING" />
+        <File Id="Pcre2Licence" Source="$(var.ReleaseDir)\tools\licenses\runtime\pcre2-LICENCE.md" />
+        <File Id="WinpthreadsCopying" Source="$(var.ReleaseDir)\tools\licenses\runtime\winpthreads-COPYING" />
+        <File Id="X264Copying" Source="$(var.ReleaseDir)\tools\licenses\runtime\x264-COPYING" />
+        <File Id="ZlibLicense" Source="$(var.ReleaseDir)\tools\licenses\runtime\zlib-LICENSE" />
+        <RemoveFolder Id="RemoveRuntimeLicensesFolder" Directory="RuntimeLicensesFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="RuntimeLicenseFiles" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="StartMenuShortcuts" Guid="{7A4FAC78-F675-418D-A566-FBD47FC39B95}">
+        <Shortcut
+            Id="StartMenuApplicationShortcut"
+            Name="Klanggeist Lyrics Studio"
+            Description="Lyrics transkribieren, prüfen und als Video exportieren"
+            Target="[INSTALLFOLDER]KlanggeistLyricsStudio.exe"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="KlanggeistAppIcon" />
+        <Shortcut
+            Id="StartMenuBackendShortcut"
+            Name="Whisper-Backend installieren"
+            Description="Python-Abhängigkeiten für die Transkription installieren"
+            Target="[SystemFolder]cmd.exe"
+            Arguments="/c &quot;[INSTALLFOLDER]INSTALL_BACKEND.bat&quot;"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="KlanggeistAppIcon" />
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\Klanggeist\LyricsStudio"
+            Name="StartMenuShortcuts"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="{64C5C716-25F3-46C8-AE8E-57F7B7FCB4EA}">
+        <Shortcut
+            Id="DesktopApplicationShortcut"
+            Name="Klanggeist Lyrics Studio"
+            Description="Lyrics transkribieren, prüfen und als Video exportieren"
+            Target="[INSTALLFOLDER]KlanggeistLyricsStudio.exe"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="KlanggeistAppIcon" />
+        <RegistryValue
+            Root="HKCU"
+            Key="Software\Klanggeist\LyricsStudio"
+            Name="DesktopShortcut"
+            Type="integer"
+            Value="1"
+            KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+  </Fragment>
+</Wix>

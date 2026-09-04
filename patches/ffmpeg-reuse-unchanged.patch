@@ -1,0 +1,100 @@
+diff --git a/libavfilter/vf_subtitles.c b/libavfilter/vf_subtitles.c
+index 72c621a..1203305 100644
+--- a/libavfilter/vf_subtitles.c
++++ b/libavfilter/vf_subtitles.c
+@@ -64,6 +64,10 @@ typedef struct AssContext {
+     int shaping;
+     FFDrawContext draw;
+     int wrap_unicode;
++    int reuse_unchanged;
++    AVFrame *last_source;
++    unsigned long long rendered_frames;
++    unsigned long long reused_frames;
+ } AssContext;
+ 
+ #define OFFSET(x) offsetof(AssContext, x)
+@@ -75,6 +79,7 @@ typedef struct AssContext {
+     {"original_size",  "set the size of the original video (used to scale fonts)", OFFSET(original_w), AV_OPT_TYPE_IMAGE_SIZE, {.str = NULL},  0, 0, FLAGS }, \
+     {"fontsdir",       "set the directory containing the fonts to read",           OFFSET(fontsdir),   AV_OPT_TYPE_STRING,     {.str = NULL},  0, 0, FLAGS }, \
+     {"alpha",          "enable processing of alpha channel",                       OFFSET(alpha),      AV_OPT_TYPE_BOOL,       {.i64 = 0   },         0,        1, FLAGS }, \
++    {"reuse_unchanged", "drop frames whose looped background and ASS image are unchanged", OFFSET(reuse_unchanged), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, FLAGS }, \
+ 
+ #define SHAPING_OPTIONS \
+     {"shaping", "set shaping engine", OFFSET(shaping), AV_OPT_TYPE_INT, { .i64 = -1 }, -1, 1, FLAGS, .unit = "shaping_mode"}, \
+@@ -170,6 +175,10 @@ static av_cold void uninit(AVFilterContext *ctx)
+ {
+     AssContext *ass = ctx->priv;
+ 
++    av_log(ctx, AV_LOG_VERBOSE,
++           "Klanggeist subtitle reuse: rendered %llu, reused %llu frames\n",
++           ass->rendered_frames, ass->reused_frames);
++    av_frame_free(&ass->last_source);
+     if (ass->track)
+         ass_free_track(ass->track);
+     if (ass->renderer)
+@@ -236,6 +245,25 @@ static void overlay_ass_image(AssContext *ass, AVFrame *picref,
+     }
+ }
+ 
++/*
++ * Return true only when both frames are views onto the exact same immutable
++ * pixel storage.  This is deliberately stricter than a visual comparison:
++ * Klanggeist places a loop directly after its one-time cover scale, so equal
++ * integer crop positions have identical data pointers and line sizes.
++ */
++static int same_pixel_view(const AVFrame *a, const AVFrame *b)
++{
++    if (!a || !b || a->format != b->format ||
++        a->width != b->width || a->height != b->height)
++        return 0;
++
++    for (int i = 0; i < AV_NUM_DATA_POINTERS; i++) {
++        if (a->data[i] != b->data[i] || a->linesize[i] != b->linesize[i])
++            return 0;
++    }
++    return 1;
++}
++
+ static int filter_frame(AVFilterLink *inlink, AVFrame *picref)
+ {
+     AVFilterContext *ctx = inlink->dst;
+@@ -249,7 +277,31 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *picref)
+     if (detect_change)
+         av_log(ctx, AV_LOG_DEBUG, "Change happened at time ms:%f\n", time_ms);
+ 
++    if (ass->reuse_unchanged && !detect_change &&
++        same_pixel_view(picref, ass->last_source)) {
++        ass->reused_frames++;
++        av_frame_free(&picref);
++        return 0;
++    }
++
++    if (ass->reuse_unchanged) {
++        AVFrame *source = av_frame_clone(picref);
++        if (!source) {
++            av_frame_free(&picref);
++            return AVERROR(ENOMEM);
++        }
++        av_frame_free(&ass->last_source);
++        ass->last_source = source;
++    }
++
++    int ret = av_frame_make_writable(picref);
++    if (ret < 0) {
++        av_frame_free(&picref);
++        return ret;
++    }
++
+     overlay_ass_image(ass, picref, image);
++    ass->rendered_frames++;
+ 
+     return ff_filter_frame(outlink, picref);
+ }
+@@ -258,7 +310,6 @@ static const AVFilterPad ass_inputs[] = {
+     {
+         .name             = "default",
+         .type             = AVMEDIA_TYPE_VIDEO,
+-        .flags            = AVFILTERPAD_FLAG_NEEDS_WRITABLE,
+         .filter_frame     = filter_frame,
+         .config_props     = config_input,
+     },
