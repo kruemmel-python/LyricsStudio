@@ -37,14 +37,14 @@ jobs:
 
       - name: Portable und MSI bauen
         shell: pwsh
-        run: .\BUILD_RELEASE.ps1 -Version 2.1.1
+        run: .\BUILD_RELEASE.ps1 -Version 2.1.2
 
       - name: Release-Pakete als Workflow-Artefakt sichern
         uses: actions/upload-artifact@v7
         with:
-          name: KlanggeistLyricsStudio-2.1.1-windows
+          name: KlanggeistLyricsStudio-2.1.2-windows
           path: |
-            dist/KlanggeistLyricsStudio-2.1.1-portable.zip
-            dist/KlanggeistLyricsStudio-2.1.1-x64.msi
+            dist/KlanggeistLyricsStudio-2.1.2-portable.zip
+            dist/KlanggeistLyricsStudio-2.1.2-x64.msi
             dist/SHA256SUMS.txt
           if-no-files-found: error

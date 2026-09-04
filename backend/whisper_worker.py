@@ -80,7 +80,11 @@ def current(audio: Path, paths: dict[str, Path], model: str, overwrite: bool) ->
     try:
         doc = json.loads(paths["json"].read_text(encoding="utf-8"))
         st = audio.stat(); source = doc.get("source", {}); pipeline = doc.get("pipeline", {})
-        return source.get("size") == st.st_size and source.get("mtime_ns") == st.st_mtime_ns and pipeline.get("model") == model
+        stored_file = source.get("file")
+        if not isinstance(stored_file, str) or not stored_file:
+            return False
+        same_source = os.path.normcase(str(Path(stored_file).resolve(strict=False))) == os.path.normcase(str(audio.resolve(strict=False)))
+        return same_source and source.get("size") == st.st_size and source.get("mtime_ns") == st.st_mtime_ns and pipeline.get("model") == model
     except Exception:
         return False
 
@@ -97,7 +101,7 @@ def save(audio: Path, input_root: Path, paths: dict[str, Path], segments: list[S
     doc = {
         "source": {"file": str(audio), "relative_file": relative, "size": st.st_size, "mtime_ns": st.st_mtime_ns},
         "pipeline": {
-            "app": "Klanggeist Lyrics Studio", "app_version": "2.1.1", "backend": "faster-whisper",
+            "app": "Klanggeist Lyrics Studio", "app_version": "2.1.2", "backend": "faster-whisper",
             "model": args.model, "device": args.device, "compute_type": args.compute_type,
             "language_requested": None if args.language == "auto" else args.language,
             "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),

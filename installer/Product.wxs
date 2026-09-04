@@ -72,6 +72,7 @@
         <File Id="FfmpegMd" Source="$(var.ReleaseDir)\docs\FFMPEG.md" />
         <File Id="ChangelogMd" Source="$(var.ReleaseDir)\docs\CHANGELOG.md" />
         <File Id="ValidationMd" Source="$(var.ReleaseDir)\docs\VALIDATION.md" />
+        <File Id="ReleaseNotesMd" Source="$(var.ReleaseDir)\docs\RELEASE_NOTES_$(var.ProductVersion).md" />
         <RemoveFolder Id="RemoveDocsFolder" Directory="DocsFolder" On="uninstall" />
         <RegistryValue Root="HKCU" Key="Software\Klanggeist\LyricsStudio\Installer" Name="DocumentationFiles" Type="integer" Value="1" KeyPath="yes" />
       </Component>

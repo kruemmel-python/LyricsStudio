@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Version = "2.1.1",
+    [string]$Version = "2.1.2",
     [ValidateSet("Release")]
     [string]$Configuration = "Release",
     [string]$FfmpegSourceDir = ""
@@ -65,35 +65,46 @@ New-Item -ItemType Directory -Path $distDir -Force | Out-Null
 & $nativeCmake -S $projectDir -B $buildDir -G "Visual Studio 17 2022" -A x64
 Assert-LastExitCode "CMake-Konfiguration fehlgeschlagen."
 
-foreach ($target in @("KlanggeistLyricsStudio", "KlanggeistVideoSmoke", "KlanggeistExportControllerSmoke")) {
+foreach ($target in @("KlanggeistLyricsStudio", "KlanggeistVideoSmoke", "KlanggeistExportControllerSmoke", "KlanggeistLyricsRefreshSmoke")) {
     & $nativeCmake --build $buildDir --config $Configuration --target $target --parallel
     Assert-LastExitCode "Build des Targets $target fehlgeschlagen."
 }
+
+& (Join-Path $releaseDir "KlanggeistLyricsRefreshSmoke.exe")
+Assert-LastExitCode "Lyrics-Aktualisierungstest fehlgeschlagen."
 
 $pythonLauncher = Get-Command py -ErrorAction SilentlyContinue
 if ($null -ne $pythonLauncher) {
     & $pythonLauncher.Source -3.12 -m py_compile (Join-Path $projectDir "backend\whisper_worker.py")
     Assert-LastExitCode "Python-Syntaxprüfung fehlgeschlagen."
+    & $pythonLauncher.Source -3.12 -m unittest discover -s (Join-Path $projectDir "tests") -p "*_test.py"
+    Assert-LastExitCode "Python-Pfadtests fehlgeschlagen."
 } else {
     $python = Get-Command python -ErrorAction Stop
     & $python.Source -m py_compile (Join-Path $projectDir "backend\whisper_worker.py")
     Assert-LastExitCode "Python-Syntaxprüfung fehlgeschlagen."
+    & $python.Source -m unittest discover -s (Join-Path $projectDir "tests") -p "*_test.py"
+    Assert-LastExitCode "Python-Pfadtests fehlgeschlagen."
 }
 
 & (Join-Path $projectDir "BUILD_MSI.ps1") -Configuration $Configuration -Version $Version
 Assert-LastExitCode "MSI-Erstellung fehlgeschlagen."
 
 Reset-SafeDirectory -Path $portableStage -ExpectedParent $packageDir
-foreach ($file in @(
-    "KlanggeistLyricsStudio.exe", "INSTALL_BACKEND.bat", "requirements.txt",
-    "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md"
+foreach ($relative in @(
+    "INSTALL_BACKEND.bat", "requirements.txt", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
+    "assets\KlanggeistLyricsStudio-icon-preview.png", "assets\KlanggeistLyricsStudio-master.png",
+    "assets\KlanggeistLyricsStudio.ico", "assets\KlanggeistLyricsStudio.png",
+    "backend\whisper_worker.py", "presets\Klanggeist Lyrics Video.json",
+    "docs\ARCHITEKTUR.md", "docs\BUILD.md", "docs\CHANGELOG.md", "docs\FFMPEG.md",
+    "docs\HANDBUCH.md", "docs\TATARUS.md", "docs\VALIDATION.md", "docs\RELEASE_NOTES_$Version.md"
 )) {
-    $source = if ($file -eq "KlanggeistLyricsStudio.exe") { Join-Path $releaseDir $file } else { Join-Path $projectDir $file }
-    Copy-Item -LiteralPath $source -Destination $portableStage
+    $destination = Join-Path $portableStage $relative
+    New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $projectDir $relative) -Destination $destination
 }
-foreach ($directory in @("assets", "backend", "docs", "presets", "tools")) {
-    Copy-Item -LiteralPath (Join-Path $projectDir $directory) -Destination $portableStage -Recurse
-}
+Copy-Item -LiteralPath (Join-Path $releaseDir "KlanggeistLyricsStudio.exe") -Destination $portableStage
+Copy-Item -LiteralPath (Join-Path $projectDir "tools") -Destination $portableStage -Recurse
 
 if (Test-Path -LiteralPath $portableZip) { Remove-Item -LiteralPath $portableZip -Force }
 Compress-Archive -LiteralPath $portableStage -DestinationPath $portableZip -CompressionLevel Optimal

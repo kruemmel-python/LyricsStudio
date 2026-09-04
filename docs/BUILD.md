@@ -31,6 +31,7 @@ Das Skript konfiguriert `build/` für Visual Studio 2022 x64 und baut:
 - `KlanggeistLyricsStudio`
 - `KlanggeistVideoSmoke`
 - `KlanggeistExportControllerSmoke`
+- `KlanggeistLyricsRefreshSmoke`
 
 Alle C++-Targets verwenden Warnungen als Fehler.
 
@@ -75,7 +76,7 @@ Modelldateien gehören nicht in Build oder Repository. Sie werden bei der ersten
 ## 5. MSI bauen
 
 ```powershell
-.\BUILD_MSI.ps1 -Configuration Release -Version 2.1.1
+.\BUILD_MSI.ps1 -Configuration Release -Version 2.1.2
 ```
 
 Das Skript:
@@ -89,7 +90,7 @@ Das Skript:
 Ausgabe:
 
 ```text
-dist\KlanggeistLyricsStudio-2.1.1-x64.msi
+dist\KlanggeistLyricsStudio-2.1.2-x64.msi
 ```
 
 Installationsziel:
@@ -103,7 +104,7 @@ Das Paket legt Startmenü- und Desktop-Verknüpfungen an. Die MSI-Datei ist ohne
 ## 6. Vollständigen Release bauen
 
 ```powershell
-.\BUILD_RELEASE.ps1 -Version 2.1.1
+.\BUILD_RELEASE.ps1 -Version 2.1.2
 ```
 
 Erzeugt:
@@ -116,7 +117,7 @@ Wenn der vollständige gepatchte FFmpeg-Quellbaum lokal vorhanden ist:
 
 ```powershell
 .\BUILD_RELEASE.ps1 `
-  -Version 2.1.1 `
+  -Version 2.1.2 `
   -FfmpegSourceDir D:\Pfad\zu\ffmpeg-klanggeist
 ```
 
@@ -127,7 +128,7 @@ Dann entsteht zusätzlich der vollständige FFmpeg-Quellcode als Release-Asset.
 Das Portable-ZIP enthält:
 
 ```text
-KlanggeistLyricsStudio-2.1.1-portable\
+KlanggeistLyricsStudio-2.1.2-portable\
   KlanggeistLyricsStudio.exe
   INSTALL_BACKEND.bat
   requirements.txt
@@ -172,8 +173,9 @@ Vor einem Tag müssen folgende Punkte erfüllt sein:
 
 - Versionsnummern in CMake, RC, UI, Backend und WiX stimmen überein.
 - `git status` enthält keine persönlichen oder generierten Dateien.
-- Python-Syntaxprüfung ist erfolgreich.
-- Hauptprogramm und beide Smoke-Targets bauen mit `/WX`.
+- Python-Syntaxprüfung und die Ausgabeordner-/Quellidentitätstests sind erfolgreich.
+- Hauptprogramm und alle drei Smoke-Targets bauen mit `/WX`.
+- `KlanggeistLyricsRefreshSmoke` bestätigt, dass eine am selben Pfad ersetzte JSON-Datei neu geladen wird.
 - Portable-ZIP enthält weder Einstellungen noch `.hf`.
 - MSI-Validierung ist erfolgreich.
 - FFmpeg-Mischgraph aus Cut und Crossfade ist erfolgreich.

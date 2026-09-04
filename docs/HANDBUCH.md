@@ -1,4 +1,4 @@
-# UI-Handbuch – Klanggeist Lyrics Studio 2.1.1
+# UI-Handbuch – Klanggeist Lyrics Studio 2.1.2
 
 Dieses Handbuch beschreibt die Oberfläche, jeden Button und einen vollständigen Arbeitsablauf vom Song bis zum fertigen Lyrics-Video.
 
@@ -59,6 +59,8 @@ Der gewählte Ordner wird zugleich als Watch-Ordner gespeichert.
 
 Legt den Basisordner für TXT, LRC, SRT und JSON fest. Bei einem importierten Ordner bleibt dessen Unterordnerstruktur in der Ausgabe erhalten.
 
+Klanggeist prüft den Ordner sofort auf Schreibbarkeit und speichert die Auswahl unmittelbar. Beim Start wird dieses Ziel fest an alle wartenden Queue-Einträge gebunden. Während einer laufenden Transkription kann es deshalb nicht versehentlich geändert werden.
+
 Beispiel:
 
 ```text
@@ -76,6 +78,8 @@ D:\Lyrics\Album\Titel.lyrics.json
 Startet den persistenten Python-Worker, lädt das ausgewählte Whisper-Modell einmal und verarbeitet anschließend alle wartenden Queue-Einträge der Reihe nach.
 
 Der Worker bleibt für die gesamte Queue aktiv. Dadurch wird ein großes Modell nicht für jeden Song erneut geladen.
+
+Unterhalb der Queue steht zunächst `Ziel dieser Queue`, während eines Auftrags `Schreibe nach` und nach Abschluss `Gespeichert` mit dem vollständigen Pfad der erzeugten `.lyrics.json`. Der Editor öffnet anschließend genau diese Datei. Wurde eine gleichnamige Datei ersetzt, wird ihr Inhalt neu von der Festplatte geladen.
 
 ### `STOP`
 
@@ -150,7 +154,7 @@ Der Editor besteht aus Songliste, Segmentliste und Bearbeitungsbereich.
 
 ### Songliste
 
-Sie enthält alle `*.lyrics.json`-Dateien im aktuellen Lyrics-Ausgabeordner und dessen Unterordnern. Ein Klick lädt Song, Audioquelle, Zeitsegmente und Confidence-Metadaten.
+Sie enthält alle `*.lyrics.json`-Dateien im aktuellen Lyrics-Ausgabeordner und dessen Unterordnern. Ein Klick lädt Song, Audioquelle, Zeitsegmente und Confidence-Metadaten. Dateien in Unterordnern werden mit ihrem relativen Pfad angezeigt, damit gleichnamige Songs eindeutig unterscheidbar bleiben.
 
 ### Segmentliste
 
@@ -194,7 +198,7 @@ Filtert die Segmentliste. Die Daten selbst werden nicht verändert.
 
 ### `REFRESH`
 
-Liest die Songliste erneut aus dem Lyrics-Ausgabeordner ein. Nicht gespeicherte Änderungen des aktuell geladenen Dokuments sollten vorher gespeichert werden.
+Liest die Songliste und das ausgewählte, unveränderte Dokument erneut aus dem Lyrics-Ausgabeordner ein. Dadurch werden auch extern oder durch eine neue Transkription ersetzte gleichnamige Dateien aktualisiert. Nicht gespeicherte Editoränderungen bleiben geschützt und werden nicht ungefragt verworfen.
 
 ### `SPEICHERN`
 
@@ -313,7 +317,7 @@ Legt den Zielordner fest. Der Dateiname wird automatisch aus dem Namen der Audio
 
 ### Preset
 
-Version 2.1.1 verwendet das feste Preset `Klanggeist Lyrics Video`:
+Version 2.1.2 verwendet das feste Preset `Klanggeist Lyrics Video`:
 
 - MP4
 - 1920 × 1080

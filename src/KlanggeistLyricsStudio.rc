@@ -4,8 +4,8 @@
 IDI_APP_ICON ICON "../assets/KlanggeistLyricsStudio.ico"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,1,1,0
- PRODUCTVERSION 2,1,1,0
+ FILEVERSION 2,1,2,0
+ PRODUCTVERSION 2,1,2,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS VS_FF_DEBUG
@@ -22,11 +22,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Klanggeist\0"
             VALUE "FileDescription", "Klanggeist Lyrics Studio\0"
-            VALUE "FileVersion", "2.1.1\0"
+            VALUE "FileVersion", "2.1.2\0"
             VALUE "InternalName", "KlanggeistLyricsStudio\0"
             VALUE "OriginalFilename", "KlanggeistLyricsStudio.exe\0"
             VALUE "ProductName", "Klanggeist Lyrics Studio\0"
-            VALUE "ProductVersion", "2.1.1\0"
+            VALUE "ProductVersion", "2.1.2\0"
         END
     END
     BLOCK "VarFileInfo"

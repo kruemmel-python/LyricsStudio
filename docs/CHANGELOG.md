@@ -1,5 +1,22 @@
 # Änderungsverlauf
 
+## 2.1.2 – 2026-09-04
+
+### Behoben
+
+- Nach einer erneuten Transkription eines gleichnamigen Songs lädt der Lyrics Editor die vom Worker gerade geschriebene JSON-Datei neu, statt eine ältere Version aus dem Arbeitsspeicher weiter anzuzeigen.
+- Der vom Whisper-Worker gemeldete vollständige `json_path` wird dem zugehörigen Queue-Auftrag zugeordnet und als einziges Ziel für die automatische Editor-Auswahl verwendet.
+- Der gewählte Lyrics-Ausgabeordner wird beim Start einer Queue auf Existenz und Schreibbarkeit geprüft und für jeden Auftrag fest gespeichert. Eine spätere UI-Zustandsänderung kann das Ziel eines laufenden Auftrags nicht mehr umleiten.
+- Der `START`-Button verarbeitet neue Queue-Einträge auch dann, wenn der persistente Whisper-Worker nach einer vorherigen Queue bereits bereitsteht.
+
+### Oberfläche und Prüfung
+
+- Der vollständige Zielpfad erscheint während der Verarbeitung sowie nach `Gespeichert` oder `Vorhanden` sichtbar unterhalb der Queue.
+- Gleichnamige Lyrics in verschiedenen Unterordnern werden in der Songliste mit ihrem relativen Pfad unterschieden.
+- Die Auswahl über `AUSGABE` wird unmittelbar gespeichert; während eines aktiven Auftrags ist ein Zielwechsel gesperrt.
+- Automatische Tests prüfen den gewählten Ausgabeordner und verhindern, dass eine gleichnamige Datei mit abweichender Quelle fälschlich als aktuell übersprungen wird.
+- Portable-Paketierung verwendet eine feste Freigabeliste, damit lokale Zusatzdateien nicht versehentlich in ein Release gelangen.
+
 ## 2.1.1 – 2026-09-04
 
 ### Behoben

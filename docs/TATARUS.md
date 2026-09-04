@@ -11,7 +11,7 @@ TATARUS ist die lokale Visual-Intelligence-Schicht von Klanggeist Lyrics Studio.
 - relative Größe der eingebrannten Lyrics,
 - einen vollständigen abschnittsbasierten Produktionsentwurf.
 
-TATARUS ist in Version 2.1.1 **kein großes neuronales Netz, kein generatives Modell und kein Cloud-Dienst**. Die Implementierung ist ein kompakter, persistenter Online-Lerner aus normalisierten Sensorwerten, gewichteten linearen Scores, Sigmoid-Abbildung und paarweisem Präferenzlernen. Diese Form ist schnell, nachvollziehbar und vollständig lokal.
+TATARUS ist in Version 2.1.2 **kein großes neuronales Netz, kein generatives Modell und kein Cloud-Dienst**. Die Implementierung ist ein kompakter, persistenter Online-Lerner aus normalisierten Sensorwerten, gewichteten linearen Scores, Sigmoid-Abbildung und paarweisem Präferenzlernen. Diese Form ist schnell, nachvollziehbar und vollständig lokal.
 
 ## 2. Was TATARUS nicht tut
 
@@ -249,7 +249,7 @@ Mit aktivem `ALLE BILDER MINDESTENS 1×` gelten folgende Regeln:
 - Eine direkte Wiederholung wird besonders stark bestraft.
 - Nach vollständiger Pool-Abdeckung sind Wiederholungen wieder erlaubt.
 
-In Version 2.1.1 beträgt der Reuse-Cooldown vier Bilder und die Basiskostenstrafe 0,16 pro vorheriger Verwendung.
+In Version 2.1.2 beträgt der Reuse-Cooldown vier Bilder und die Basiskostenstrafe 0,16 pro vorheriger Verwendung.
 
 ### Abschnittsstil
 

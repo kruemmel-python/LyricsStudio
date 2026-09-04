@@ -20,6 +20,10 @@ if errorlevel 1 goto :fail
 if errorlevel 1 goto :fail
 "%CMAKE_EXE%" --build build --config Release --target KlanggeistExportControllerSmoke
 if errorlevel 1 goto :fail
+"%CMAKE_EXE%" --build build --config Release --target KlanggeistLyricsRefreshSmoke
+if errorlevel 1 goto :fail
+"build\Release\KlanggeistLyricsRefreshSmoke.exe"
+if errorlevel 1 goto :fail
 echo.
 echo Strikter Build erfolgreich: Hauptprogramm + Smoke-Test-Binaries, /W4 + /WX.
 echo Fertig: build\Release\KlanggeistLyricsStudio.exe

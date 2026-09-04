@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(KlanggeistLyricsStudio VERSION 2.1.1 LANGUAGES CXX)
+project(KlanggeistLyricsStudio VERSION 2.1.2 LANGUAGES CXX)
 
 # Qualitätsregel: Warnungen sind Fehler. Keine Suppression, kein stilles Durchwinken.
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
@@ -128,3 +128,15 @@ add_custom_command(TARGET KlanggeistExportControllerSmoke POST_BUILD
             "${CMAKE_SOURCE_DIR}/tools"
             "$<TARGET_FILE_DIR:KlanggeistExportControllerSmoke>/tools"
 )
+
+add_executable(KlanggeistLyricsRefreshSmoke EXCLUDE_FROM_ALL
+    tests/lyrics_refresh_smoke.cpp
+    src/lyrics_document.cpp
+    src/mini_json.cpp
+)
+target_compile_features(KlanggeistLyricsRefreshSmoke PRIVATE cxx_std_20)
+target_compile_definitions(KlanggeistLyricsRefreshSmoke PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_include_directories(KlanggeistLyricsRefreshSmoke PRIVATE src)
+if(MSVC)
+    target_compile_options(KlanggeistLyricsRefreshSmoke PRIVATE /W4 /WX /permissive- /EHsc /utf-8 /Zc:__cplusplus)
+endif()

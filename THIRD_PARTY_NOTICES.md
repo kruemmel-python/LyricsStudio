@@ -1,6 +1,6 @@
 # Drittanbieterhinweise
 
-Stand: Klanggeist Lyrics Studio 2.1.1
+Stand: Klanggeist Lyrics Studio 2.1.2
 
 Der Klanggeist-eigene Quellcode steht unter der MIT-Lizenz im Wurzelverzeichnis. Mitgelieferte oder optional installierte Drittanbieterkomponenten behalten ihre eigenen Lizenzen. Dieser Hinweis ersetzt keine Lizenztexte.
 
@@ -55,7 +55,7 @@ Python und diese Pakete werden **nicht** im Portable-ZIP oder MSI eingebettet. `
 | faster-whisper | Whisper-Inferenz | MIT, <https://github.com/SYSTRAN/faster-whisper> |
 | CTranslate2 und transitive Python-Abhängigkeiten | Inferenzlaufzeit | Bedingungen der jeweils installierten Paketversion |
 
-Die konkrete Abhängigkeitsauflösung erfolgt zum Installationszeitpunkt. Für eine vollständig reproduzierbare Python-Umgebung sollte ein projektspezifischer Lockfile-Workflow ergänzt werden; Version 2.1.1 verwendet bewusst die Mindestanforderung `faster-whisper>=1.1`.
+Die konkrete Abhängigkeitsauflösung erfolgt zum Installationszeitpunkt. Für eine vollständig reproduzierbare Python-Umgebung sollte ein projektspezifischer Lockfile-Workflow ergänzt werden; Version 2.1.2 verwendet bewusst die Mindestanforderung `faster-whisper>=1.1`.
 
 Whisper-Modelle werden ebenfalls nicht verteilt. Ihre jeweiligen Model-Cards und Lizenzen sind beim Downloadanbieter zu beachten.
 

@@ -31,7 +31,21 @@ constexpr int kEditId = 1001;
 
 enum class Page { Transcribe, Editor, VideoExport, Settings };
 enum class JobStatus { Queued, Running, Done, Skipped, Error };
-struct Job { fs::path path; fs::path inputRoot; JobStatus status{JobStatus::Queued}; float progress{}; std::wstring message; };
+struct Job { fs::path path; fs::path inputRoot; fs::path outputRoot; fs::path lyricsJsonPath; JobStatus status{JobStatus::Queued}; float progress{}; std::wstring message; };
+
+bool SamePath(const fs::path& left,const fs::path& right){
+    if(left.empty()||right.empty())return false;
+    std::error_code ec;if(fs::equivalent(left,right,ec))return true;
+    return _wcsicmp(left.lexically_normal().c_str(),right.lexically_normal().c_str())==0;
+}
+
+bool EnsureWritableDirectory(const fs::path& directory,std::wstring& error){
+    std::error_code ec;fs::create_directories(directory,ec);
+    if(ec||!fs::is_directory(directory,ec)){error=L"Der Lyrics-Ausgabeordner ist nicht verfügbar: "+directory.wstring();return false;}
+    const auto probe=directory/(L".klanggeist-write-test-"+std::to_wstring(GetCurrentProcessId())+L".tmp");
+    {std::ofstream out(probe,std::ios::binary|std::ios::trunc);if(!out){error=L"Im Lyrics-Ausgabeordner kann nicht geschrieben werden: "+directory.wstring();return false;}out<<"ok";}
+    fs::remove(probe,ec);return true;
+}
 
 struct Theme {
     D2D1_COLOR_F bg{0.025f,0.028f,0.034f,1};
@@ -73,9 +87,9 @@ private:
     FRect navTrans_,navEdit_,navVideo_,navSettings_,btnFile_,btnFolder_,btnOutput_,btnStart_,btnStop_,btnClear_,modelChip_,deviceChip_,computeChip_,languageChip_,watchChip_,overwriteChip_;
     FRect editorVideo_,editorRefresh_,editorSave_,editorApply_,editorApplyNext_,editorPlay_,editorBefore_,editorStop_,editorNext_,editorSuspicious_,timelineRect_;
     FRect videoPreviewRect_,videoChooseCover_,videoChooseAlbumCover_,videoUseAllImagesChip_,videoChooseOutput_,videoSmartCuts_,videoTatarusCuts_,videoTatarusProduce_,videoExport_,videoCancel_,videoPreviewPlay_,videoPreviewStop_,videoTimeline_;
-    std::deque<Job> jobs_; int activeJob_{-1}; int queueScroll_{}; std::wstring outputRoot_; std::wstring model_{L"large-v3"},device_{L"cpu"},compute_{L"int8"},language_{L"auto"}; bool watchEnabled_{true}, overwrite_{}; std::optional<fs::path> watchedRoot_;
+    std::deque<Job> jobs_; int activeJob_{-1}; int queueScroll_{}; std::wstring outputRoot_; fs::path queueOutputRoot_; std::wstring transcriptionMessage_{L"Bereit"}; std::wstring model_{L"large-v3"},device_{L"cpu"},compute_{L"int8"},language_{L"auto"}; bool watchEnabled_{true}, overwrite_{}; std::optional<fs::path> watchedRoot_;
     std::vector<std::wstring> log_; std::unique_ptr<JobController> worker_; bool backendReady_{};
-    std::vector<fs::path> lyricFiles_; std::unique_ptr<LyricsDocument> doc_; int songIndex_{-1},segmentIndex_{-1},songScroll_{},segmentScroll_{}; bool onlySuspicious_{}; double cursorSeconds_{}; AudioPlayer audio_;
+    std::vector<fs::path> lyricFiles_; std::unique_ptr<LyricsDocument> doc_; std::optional<fs::path> latestLyricsPath_; int songIndex_{-1},segmentIndex_{-1},songScroll_{},segmentScroll_{}; bool onlySuspicious_{}; double cursorSeconds_{}; AudioPlayer audio_;
     AudioAnalysis videoAudioAnalysis_;
     SongStructure videoSongStructure_;
     TatarusVisualBrain tatarusVisualBrain_;
@@ -140,12 +154,12 @@ void App::DrawTranscribe(){RECT rc;GetClientRect(hwnd_,&rc);float W=rc.right/dpi
     Text(L"Ausgabe: "+outputRoot_,{x+830,210,W-40,248},10,th_.muted,DWRITE_TEXT_ALIGNMENT_TRAILING);
     Fill({x,260,W-30,H-122},th_.panel,10);Stroke({x,260,W-30,H-122},th_.line,1,10);Text(L"QUEUE",{x+16,270,x+100,296},11,th_.muted,DWRITE_TEXT_ALIGNMENT_LEADING,DWRITE_FONT_WEIGHT_BOLD);Text(L"STATUS",{W-330,270,W-250,296},10,th_.muted,DWRITE_TEXT_ALIGNMENT_CENTER);Text(L"PROGRESS",{W-225,270,W-55,296},10,th_.muted,DWRITE_TEXT_ALIGNMENT_CENTER);
     const float rowH=46;int visible=std::max(1,int((H-430)/rowH));int start=std::clamp(queueScroll_,0,std::max(0,int(jobs_.size())-visible));for(int n=0;n<visible&&start+n<int(jobs_.size());++n){int i=start+n;const auto&j=jobs_[i];float y=302+n*rowH;Fill({x+10,y,W-40,y+39},i==activeJob_?D2D1::ColorF(0.07f,0.12f,0.14f,1):th_.panel2,6);Text(j.path.filename().wstring(),{x+24,y,W-350,y+39},12,th_.text);std::wstring st=L"WARTET";D2D1_COLOR_F sc=th_.muted;if(j.status==JobStatus::Running){st=L"LÄUFT";sc=th_.cyan;}else if(j.status==JobStatus::Done){st=L"FERTIG";sc=th_.ok;}else if(j.status==JobStatus::Skipped){st=L"SKIP";sc=th_.warn;}else if(j.status==JobStatus::Error){st=L"FEHLER";sc=th_.danger;}Text(st,{W-335,y,W-245,y+39},10,sc,DWRITE_TEXT_ALIGNMENT_CENTER,DWRITE_FONT_WEIGHT_BOLD);Progress({W-225,y+16,W-55,y+23},j.progress,j.status==JobStatus::Error?th_.danger:th_.cyan);}
-    btnClear_={x,H-108,x+120,H-73};Button(L"QUEUE LEEREN",btnClear_);std::wstring summary=L"Jobs: "+std::to_wstring(jobs_.size());if(activeJob_>=0)summary+=L"   //   aktiv: "+jobs_[activeJob_].path.filename().wstring();Text(summary,{x+140,H-110,W-40,H-72},11,th_.muted,DWRITE_TEXT_ALIGNMENT_TRAILING);
+    btnClear_={x,H-108,x+120,H-73};Button(L"QUEUE LEEREN",btnClear_);std::wstring summary=L"Jobs: "+std::to_wstring(jobs_.size());if(activeJob_>=0)summary+=L"   //   aktiv: "+jobs_[activeJob_].path.filename().wstring();Text(transcriptionMessage_,{x+140,H-116,W-40,H-92},9,th_.cyan,DWRITE_TEXT_ALIGNMENT_TRAILING);Text(summary,{x+140,H-92,W-40,H-70},10,th_.muted,DWRITE_TEXT_ALIGNMENT_TRAILING);
 }
 void App::DrawEditor(){RECT rc;GetClientRect(hwnd_,&rc);float W=rc.right/dpiScale_,H=rc.bottom/dpiScale_;float x=204;Text(L"LYRICS REVIEW",{x,96,W-30,126},18,th_.text,DWRITE_TEXT_ALIGNMENT_LEADING,DWRITE_FONT_WEIGHT_BOLD);Text(L"Segment anklicken → Stelle hören → Text korrigieren → TXT/LRC/SRT/JSON gemeinsam speichern.",{x,124,W-30,150},11,th_.muted);
     editorVideo_={W-466,105,W-306,140};editorRefresh_={W-296,105,W-176,140};editorSave_={W-166,105,W-46,140};Button(L"VIDEO ERSTELLEN",editorVideo_);Button(L"REFRESH",editorRefresh_);Button(L"SPEICHERN",editorSave_,true);
     float listW=250,segW=std::max(400.f,(W-x-listW-390));FRect songs{x,162,x+listW,H-78};FRect segs{x+listW+12,162,x+listW+12+segW,H-78};FRect editp{segs.r+12,162,W-30,H-78};Fill(songs,th_.panel,10);Fill(segs,th_.panel,10);Fill(editp,th_.panel,10);Stroke(songs,th_.line,1,10);Stroke(segs,th_.line,1,10);Stroke(editp,th_.line,1,10);Text(L"SONGS ("+std::to_wstring(lyricFiles_.size())+L")",{songs.l+12,songs.t+8,songs.r-12,songs.t+34},10,th_.muted);Text(L"SEGMENTS",{segs.l+12,segs.t+8,segs.r-12,segs.t+34},10,th_.muted);
-    int songVisible=std::max(1,int((songs.b-songs.t-48)/38));int ss=std::clamp(songScroll_,0,std::max(0,int(lyricFiles_.size())-songVisible));for(int n=0;n<songVisible&&ss+n<int(lyricFiles_.size());++n){int i=ss+n;float y=songs.t+38+n*38;FRect r{songs.l+8,y,songs.r-8,y+32};if(i==songIndex_)Fill(r,D2D1::ColorF(0.06f,0.20f,0.24f,1),6);auto name=lyricFiles_[i].filename().wstring();if(name.ends_with(L".lyrics.json"))name.resize(name.size()-12);Text(name,{r.l+8,r.t,r.r-6,r.b},11,i==songIndex_?th_.cyan:th_.text);}
+    int songVisible=std::max(1,int((songs.b-songs.t-48)/38));int ss=std::clamp(songScroll_,0,std::max(0,int(lyricFiles_.size())-songVisible));for(int n=0;n<songVisible&&ss+n<int(lyricFiles_.size());++n){int i=ss+n;float y=songs.t+38+n*38;FRect r{songs.l+8,y,songs.r-8,y+32};if(i==songIndex_)Fill(r,D2D1::ColorF(0.06f,0.20f,0.24f,1),6);auto relative=lyricFiles_[i].lexically_relative(fs::path(outputRoot_));auto name=(relative.empty()?lyricFiles_[i].filename():relative).wstring();if(name.ends_with(L".lyrics.json"))name.resize(name.size()-12);Text(name,{r.l+8,r.t,r.r-6,r.b},11,i==songIndex_?th_.cyan:th_.text);}
     if(doc_){const auto&v=doc_->Segments();std::vector<int> indices;indices.reserve(v.size());for(int i=0;i<int(v.size());++i)if(!onlySuspicious_||v[i].Suspicious())indices.push_back(i);int visible=std::max(1,int((segs.b-segs.t-48)/42));int start=std::clamp(segmentScroll_,0,std::max(0,int(indices.size())-visible));for(int n=0;n<visible&&start+n<int(indices.size());++n){int i=indices[start+n];const auto&s=v[i];float y=segs.t+38+n*42;FRect r{segs.l+8,y,segs.r-8,y+36};if(i==segmentIndex_)Fill(r,D2D1::ColorF(0.07f,0.13f,0.16f,1),5);Text(FormatTime(s.start),{r.l+8,r.t,r.l+73,r.b},9,s.Suspicious()?th_.warn:th_.muted);Text(s.text,{r.l+80,r.t,r.r-8,r.b},10,i==segmentIndex_?th_.cyan:th_.text);}
         Text(doc_->RelativeName(),{editp.l+14,editp.t+10,editp.r-14,editp.t+38},12,th_.text,DWRITE_TEXT_ALIGNMENT_LEADING,DWRITE_FONT_WEIGHT_SEMI_BOLD);if(segmentIndex_>=0&&segmentIndex_<int(v.size())){const auto&s=v[segmentIndex_];Text(FormatTime(s.start,true)+L"  →  "+FormatTime(s.end,true),{editp.l+14,editp.t+38,editp.r-14,editp.t+64},10,th_.muted);if(s.Suspicious())Text(L"PRÜFEN: "+s.SuspicionReason(),{editp.l+14,editp.t+62,editp.r-14,editp.t+88},10,th_.warn);}
     } else Text(L"Noch keine Lyrics geladen.",{segs.l+20,segs.t+60,segs.r-20,segs.t+100},11,th_.muted);
@@ -158,7 +172,7 @@ void App::DrawEditor(){RECT rc;GetClientRect(hwnd_,&rc);float W=rc.right/dpiScal
 void App::DrawVideoExport(){
     RECT rc;GetClientRect(hwnd_,&rc);const float W=rc.right/dpiScale_,H=rc.bottom/dpiScale_;const float x=204;
     Text(L"VIDEO EXPORT",{x,96,W-30,126},18,th_.text,DWRITE_TEXT_ALIGNMENT_LEADING,DWRITE_FONT_WEIGHT_BOLD);
-    Text(L"TATARUS v2.1.1 · FAST Render Engine · Diversity Planner · Visual Intelligence",{x,124,W-30,150},11,th_.muted);
+    Text(L"TATARUS v2.1.2 · FAST Render Engine · Diversity Planner · Visual Intelligence",{x,124,W-30,150},11,th_.muted);
     videoCancel_={W-328,105,W-208,140};videoExport_={W-198,105,W-46,140};Button(L"ABBRECHEN",videoCancel_,false,true);Button(L"EXPORTIEREN",videoExport_,true);
 
     const float sideWidth=420.0f;const float rightX=W-sideWidth-30.0f;const float availableW=rightX-x-18.0f;const float availableH=H-330.0f;
@@ -201,7 +215,7 @@ void App::DrawVideoExport(){
     Progress({l,side.b-36,r,side.b-28},static_cast<float>(videoExportProgress_),videoExportState_==ExportState::Error?th_.danger:th_.cyan);Text(std::to_wstring(static_cast<int>(videoExportProgress_*100.0))+L" %",{l,side.b-27,r,side.b-7},9,th_.muted,DWRITE_TEXT_ALIGNMENT_TRAILING);
 }
 void App::DrawSettings(){RECT rc;GetClientRect(hwnd_,&rc);float W=rc.right/dpiScale_;float x=204;Text(L"SETTINGS",{x,96,W-30,126},18,th_.text,DWRITE_TEXT_ALIGNMENT_LEADING,DWRITE_FONT_WEIGHT_BOLD);Fill({x,160,W-30,600},th_.panel,10);Stroke({x,160,W-30,600},th_.line,1,10);Text(L"WHISPER BACKEND",{x+24,180,x+250,210},11,th_.muted,DWRITE_TEXT_ALIGNMENT_LEADING,DWRITE_FONT_WEIGHT_BOLD);Text(L"Inference: faster-whisper / CTranslate2. UI und Audio sind rein native Windows-C++-Komponenten.",{x+24,218,W-60,248},12,th_.text);Text(L"Model",{x+24,280,x+130,310},11,th_.muted);Text(model_,{x+160,280,x+340,310},12,th_.cyan);Text(L"Device",{x+24,320,x+130,350},11,th_.muted);Text(device_,{x+160,320,x+340,350},12,th_.text);Text(L"Compute",{x+24,360,x+130,390},11,th_.muted);Text(compute_,{x+160,360,x+340,390},12,th_.text);Text(L"Language",{x+24,400,x+130,430},11,th_.muted);Text(language_,{x+160,400,x+340,430},12,th_.text);Text(L"Cache",{x+24,440,x+130,470},11,th_.muted);Text(fs::path(ExeDirectory()).append(L".hf\\hub").wstring(),{x+160,440,W-60,470},11,th_.muted);Text(L"Videoausgabe",{x+24,490,x+140,520},11,th_.muted);Text(videoOutputRoot_,{x+160,490,W-60,520},11,th_.text);Text(L"Cover-Suche",{x+24,530,x+140,560},11,th_.muted);Text(coverRoot_.empty()?L"Noch kein Cover-Ordner gespeichert":coverRoot_,{x+160,530,W-60,560},11,coverRoot_.empty()?th_.muted:th_.text);}
-void App::DrawFooter(){RECT rc;GetClientRect(hwnd_,&rc);float W=rc.right/dpiScale_,H=rc.bottom/dpiScale_;Text(L"KLANGGEIST 2.1.1 // native C++20 // TATARUS FAST Render Engine // Whisper large-v3",{204,H-37,W-30,H-14},9,th_.muted,DWRITE_TEXT_ALIGNMENT_TRAILING);}
+void App::DrawFooter(){RECT rc;GetClientRect(hwnd_,&rc);float W=rc.right/dpiScale_,H=rc.bottom/dpiScale_;Text(L"KLANGGEIST 2.1.2 // native C++20 // TATARUS FAST Render Engine // Whisper large-v3",{204,H-37,W-30,H-14},9,th_.muted,DWRITE_TEXT_ALIGNMENT_TRAILING);}
 
 std::optional<fs::path> App::PickAudioFile(){ComPtr<IFileOpenDialog>d;if(FAILED(CoCreateInstance(CLSID_FileOpenDialog,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(d.GetAddressOf()))))return{};COMDLG_FILTERSPEC f[]={{L"Audio / Video",L"*.mp3;*.wav;*.flac;*.m4a;*.aac;*.ogg;*.opus;*.wma;*.mp4;*.mkv;*.webm"},{L"Alle Dateien",L"*.*"}};d->SetFileTypes(2,f);if(FAILED(d->Show(hwnd_)))return{};ComPtr<IShellItem>item;d->GetResult(item.GetAddressOf());PWSTR p=nullptr;item->GetDisplayName(SIGDN_FILESYSPATH,&p);fs::path out=p;CoTaskMemFree(p);return out;}
 std::optional<fs::path> App::PickCoverFile(){ComPtr<IFileOpenDialog>d;if(FAILED(CoCreateInstance(CLSID_FileOpenDialog,nullptr,CLSCTX_INPROC_SERVER,IID_PPV_ARGS(d.GetAddressOf()))))return{};COMDLG_FILTERSPEC f[]={{L"Cover-Bilder",L"*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff;*.webp"},{L"Alle Dateien",L"*.*"}};d->SetFileTypes(2,f);d->SetTitle(L"Cover für das Lyrics-Video auswählen");if(FAILED(d->Show(hwnd_)))return{};ComPtr<IShellItem>item;d->GetResult(item.GetAddressOf());PWSTR p=nullptr;item->GetDisplayName(SIGDN_FILESYSPATH,&p);fs::path out=p;CoTaskMemFree(p);return out;}
@@ -218,37 +232,87 @@ std::optional<fs::path> App::PickFolder(std::wstring_view title){ComPtr<IFileOpe
 void App::AddFile(){if(auto p=PickAudioFile()){jobs_.push_back(Job{*p,p->parent_path()});InvalidateRect(hwnd_,nullptr,FALSE);}}
 void App::AddFolder(){if(auto root=PickFolder(L"Musikordner auswählen")){watchedRoot_=*root;ScanFolder(*root);InvalidateRect(hwnd_,nullptr,FALSE);}}
 void App::ScanFolder(const fs::path& root){std::error_code ec;for(fs::recursive_directory_iterator it(root,fs::directory_options::skip_permission_denied,ec),end;it!=end;it.increment(ec)){if(ec){ec.clear();continue;}if(!it->is_regular_file(ec)||!IsAudioExtension(it->path()))continue;const auto candidate=it->path();const bool known=std::any_of(jobs_.begin(),jobs_.end(),[&](const Job&j){std::error_code e;return fs::equivalent(j.path,candidate,e)||j.path==candidate;});if(!known)jobs_.push_back(Job{candidate,root});}}
-void App::ChooseOutput(){if(auto p=PickFolder(L"Lyrics-Ausgabeordner auswählen")){outputRoot_=p->wstring();RefreshLyrics(true);InvalidateRect(hwnd_,nullptr,FALSE);}}
-void App::StartQueue(){if(jobs_.empty())return;if(worker_&&worker_->Running())return;for(auto&j:jobs_)if(j.status==JobStatus::Error)j.status=JobStatus::Queued;std::wstring err;backendReady_=false;activeJob_=-1;if(!worker_->Start(ExeDirectory(),model_,device_,compute_,language_,err)){MessageBoxW(hwnd_,err.c_str(),L"Whisper Backend",MB_ICONERROR);return;}AddLog(L"Backend startet: "+model_+L" / "+device_+L" / "+compute_);InvalidateRect(hwnd_,nullptr,FALSE);}
+void App::ChooseOutput(){
+    if(activeJob_>=0){MessageBoxW(hwnd_,L"Der Lyrics-Ausgabeordner kann während einer laufenden Transkription nicht geändert werden.",L"Lyrics-Ausgabe",MB_OK|MB_ICONINFORMATION);return;}
+    if(auto p=PickFolder(L"Lyrics-Ausgabeordner auswählen")){
+        std::wstring error;if(!EnsureWritableDirectory(*p,error)){MessageBoxW(hwnd_,error.c_str(),L"Lyrics-Ausgabe",MB_OK|MB_ICONERROR);return;}
+        outputRoot_=p->lexically_normal().wstring();queueOutputRoot_.clear();latestLyricsPath_.reset();transcriptionMessage_=L"Lyrics-Ziel: "+outputRoot_;SaveSettings();RefreshLyrics(false);InvalidateRect(hwnd_,nullptr,FALSE);
+    }
+}
+void App::StartQueue(){
+    if(jobs_.empty())return;
+    std::wstring err;const fs::path selectedRoot=fs::path(outputRoot_).lexically_normal();
+    if(!EnsureWritableDirectory(selectedRoot,err)){MessageBoxW(hwnd_,err.c_str(),L"Lyrics-Ausgabe",MB_OK|MB_ICONERROR);return;}
+    queueOutputRoot_=selectedRoot;for(auto&j:jobs_){if(j.status==JobStatus::Error)j.status=JobStatus::Queued;if(j.status==JobStatus::Queued)j.outputRoot=queueOutputRoot_;}
+    transcriptionMessage_=L"Ziel dieser Queue: "+queueOutputRoot_.wstring();SaveSettings();
+    if(worker_&&worker_->Running()){if(backendReady_&&activeJob_<0)DispatchNext();InvalidateRect(hwnd_,nullptr,FALSE);return;}
+    backendReady_=false;activeJob_=-1;if(!worker_->Start(ExeDirectory(),model_,device_,compute_,language_,err)){MessageBoxW(hwnd_,err.c_str(),L"Whisper Backend",MB_ICONERROR);return;}AddLog(L"Backend startet: "+model_+L" / "+device_+L" / "+compute_);InvalidateRect(hwnd_,nullptr,FALSE);
+}
 void App::StopQueue(){if(worker_)worker_->Stop();backendReady_=false;if(activeJob_>=0&&activeJob_<int(jobs_.size())){jobs_[activeJob_].status=JobStatus::Error;jobs_[activeJob_].message=L"Abgebrochen";}activeJob_=-1;InvalidateRect(hwnd_,nullptr,FALSE);}
-void App::DispatchNext(){if(!backendReady_||!worker_||!worker_->Running())return;for(int i=0;i<int(jobs_.size());++i){if(jobs_[i].status!=JobStatus::Queued)continue;activeJob_=i;jobs_[i].status=JobStatus::Running;jobs_[i].progress=0;json::Value::Object o;o["cmd"]="transcribe";o["path"]=WideToUtf8(jobs_[i].path.wstring());o["input_root"]=WideToUtf8(jobs_[i].inputRoot.wstring());o["output_root"]=WideToUtf8(outputRoot_);o["overwrite"]=overwrite_;std::wstring err;if(!worker_->Send(json::Value(std::move(o)),err)){jobs_[i].status=JobStatus::Error;jobs_[i].message=err;activeJob_=-1;}InvalidateRect(hwnd_,nullptr,FALSE);return;}AddLog(L"Queue abgeschlossen.");RefreshLyrics(true);}
-void App::OnWorker(WorkerEvent* raw){std::unique_ptr<WorkerEvent>ev(raw);auto getS=[&](const char*k){auto*v=ev->payload.Find(k);return v?Utf8ToWide(v->AsString()):L"";};if(ev->type=="ready"){backendReady_=true;AddLog(L"Whisper bereit.");DispatchNext();}else if(ev->type=="loading")AddLog(L"Lade Modell …");else if(ev->type=="progress"&&activeJob_>=0){if(auto*v=ev->payload.Find("progress"))jobs_[activeJob_].progress=static_cast<float>(v->AsNumber());}else if((ev->type=="done"||ev->type=="skipped"||ev->type=="error")&&activeJob_>=0){auto&j=jobs_[activeJob_];if(ev->type=="done"){j.status=JobStatus::Done;j.progress=1;AddLog(L"Fertig: "+j.path.filename().wstring());}else if(ev->type=="skipped"){j.status=JobStatus::Skipped;j.progress=1;}else{j.status=JobStatus::Error;j.message=getS("message");AddLog(L"Fehler: "+j.message);}activeJob_=-1;DispatchNext();}else if(ev->type=="fatal"){AddLog(L"FATAL: "+getS("message"));MessageBoxW(hwnd_,getS("message").c_str(),L"Whisper",MB_ICONERROR);}else if(ev->type=="log")AddLog(getS("message"));InvalidateRect(hwnd_,nullptr,FALSE);}
+void App::DispatchNext(){
+    if(!backendReady_||!worker_||!worker_->Running())return;
+    for(int i=0;i<int(jobs_.size());++i){
+        if(jobs_[i].status!=JobStatus::Queued)continue;
+        auto& job=jobs_[i];if(job.outputRoot.empty())job.outputRoot=queueOutputRoot_.empty()?fs::path(outputRoot_):queueOutputRoot_;
+        activeJob_=i;job.status=JobStatus::Running;job.progress=0;transcriptionMessage_=L"Schreibe nach: "+job.outputRoot.wstring();
+        json::Value::Object o;o["cmd"]="transcribe";o["path"]=WideToUtf8(job.path.wstring());o["input_root"]=WideToUtf8(job.inputRoot.wstring());o["output_root"]=WideToUtf8(job.outputRoot.wstring());o["overwrite"]=overwrite_;
+        std::wstring err;if(!worker_->Send(json::Value(std::move(o)),err)){job.status=JobStatus::Error;job.message=err;transcriptionMessage_=L"Fehler: "+err;activeJob_=-1;}InvalidateRect(hwnd_,nullptr,FALSE);return;
+    }
+    AddLog(L"Queue abgeschlossen.");RefreshLyrics(true);
+}
+void App::OnWorker(WorkerEvent* raw){
+    std::unique_ptr<WorkerEvent>ev(raw);auto getS=[&](const char*k){auto*v=ev->payload.Find(k);return v?Utf8ToWide(v->AsString()):L"";};
+    if(ev->type=="ready"){backendReady_=true;AddLog(L"Whisper bereit.");DispatchNext();}
+    else if(ev->type=="loading")AddLog(L"Lade Modell …");
+    else if(ev->type=="progress"&&activeJob_>=0){if(auto*v=ev->payload.Find("progress"))jobs_[activeJob_].progress=static_cast<float>(v->AsNumber());}
+    else if((ev->type=="done"||ev->type=="skipped"||ev->type=="error")&&activeJob_>=0){
+        auto&j=jobs_[activeJob_];const auto reportedPath=getS("json_path");
+        if(ev->type=="done"||ev->type=="skipped"){
+            j.status=ev->type=="done"?JobStatus::Done:JobStatus::Skipped;j.progress=1;
+            if(!reportedPath.empty()){j.lyricsJsonPath=fs::path(reportedPath).lexically_normal();latestLyricsPath_=j.lyricsJsonPath;j.message=j.lyricsJsonPath.wstring();transcriptionMessage_=(ev->type=="done"?L"Gespeichert: ":L"Vorhanden: ")+j.message;AddLog(transcriptionMessage_);}
+            else transcriptionMessage_=ev->type=="done"?L"Transkription beendet, aber der Zielpfad wurde nicht gemeldet.":L"Vorhandene Transkription übersprungen.";
+        }else{j.status=JobStatus::Error;j.message=getS("message");transcriptionMessage_=L"Fehler: "+j.message;AddLog(transcriptionMessage_);}
+        activeJob_=-1;DispatchNext();
+    }else if(ev->type=="fatal"){transcriptionMessage_=L"FATAL: "+getS("message");AddLog(transcriptionMessage_);MessageBoxW(hwnd_,getS("message").c_str(),L"Whisper",MB_ICONERROR);}
+    else if(ev->type=="log")AddLog(getS("message"));InvalidateRect(hwnd_,nullptr,FALSE);
+}
 void App::AddLog(std::wstring s){log_.push_back(std::move(s));if(log_.size()>100)log_.erase(log_.begin());}
 
 void App::RefreshLyrics(bool revealNewest){
+    CommitEdit();
     std::optional<fs::path> selectedPath;
-    if(songIndex_>=0&&songIndex_<int(lyricFiles_.size()))selectedPath=lyricFiles_[songIndex_];
+    if(doc_)selectedPath=doc_->JsonPath();
+    else if(songIndex_>=0&&songIndex_<int(lyricFiles_.size()))selectedPath=lyricFiles_[songIndex_];
+    const bool preserveDirty=doc_&&doc_->Dirty();
 
     lyricFiles_=DiscoverLyricsJson(outputRoot_);
-    songIndex_=-1;
-    if(selectedPath){
-        const auto selected=std::find(lyricFiles_.begin(),lyricFiles_.end(),*selectedPath);
-        if(selected!=lyricFiles_.end())songIndex_=static_cast<int>(std::distance(lyricFiles_.begin(),selected));
-        else{doc_.reset();segmentIndex_=-1;segmentScroll_=0;audio_.Stop();ShowWindow(edit_,SW_HIDE);}
-    }
+    auto findIndex=[&](const fs::path& path){for(size_t i=0;i<lyricFiles_.size();++i)if(SamePath(lyricFiles_[i],path))return static_cast<int>(i);return -1;};
+    const int selectedIndex=selectedPath?findIndex(*selectedPath):-1;
+    const int latestIndex=revealNewest&&latestLyricsPath_?findIndex(*latestLyricsPath_):-1;
+    const int targetIndex=!preserveDirty&&latestIndex>=0?latestIndex:selectedIndex;
+    songIndex_=targetIndex;
+
+    if(targetIndex>=0&&!preserveDirty){
+        auto refreshed=std::make_unique<LyricsDocument>();std::wstring error;const auto& jsonPath=lyricFiles_[targetIndex];
+        if(refreshed->Load(jsonPath,jsonPath.parent_path(),error)){doc_=std::move(refreshed);segmentIndex_=-1;segmentScroll_=0;cursorSeconds_=0;audio_.Stop();ShowWindow(edit_,SW_HIDE);}
+        else{doc_.reset();songIndex_=-1;transcriptionMessage_=L"Lyrics konnten nicht geladen werden: "+error;AddLog(transcriptionMessage_);}
+    }else if(selectedPath&&selectedIndex<0&&!preserveDirty){doc_.reset();segmentIndex_=-1;segmentScroll_=0;audio_.Stop();ShowWindow(edit_,SW_HIDE);}
 
     if(revealNewest&&!lyricFiles_.empty()){
-        auto newest=lyricFiles_.begin();std::error_code newestEc;auto newestTime=fs::last_write_time(*newest,newestEc);
-        for(auto it=std::next(lyricFiles_.begin());it!=lyricFiles_.end();++it){
-            std::error_code ec;const auto time=fs::last_write_time(*it,ec);
-            if(!ec&&(newestEc||time>newestTime)){newest=it;newestTime=time;newestEc.clear();}
+        if(latestIndex>=0)songScroll_=latestIndex;
+        else{auto newest=lyricFiles_.begin();std::error_code newestEc;auto newestTime=fs::last_write_time(*newest,newestEc);
+            for(auto it=std::next(lyricFiles_.begin());it!=lyricFiles_.end();++it){
+                std::error_code ec;const auto time=fs::last_write_time(*it,ec);
+                if(!ec&&(newestEc||time>newestTime)){newest=it;newestTime=time;newestEc.clear();}
+            }
+            songScroll_=static_cast<int>(std::distance(lyricFiles_.begin(),newest));
         }
-        songScroll_=static_cast<int>(std::distance(lyricFiles_.begin(),newest));
     }
+    if(latestIndex>=0)latestLyricsPath_.reset();
     songScroll_=std::clamp(songScroll_,0,std::max(0,int(lyricFiles_.size())-1));
     InvalidateRect(hwnd_,nullptr,FALSE);
 }
-void App::SelectSong(size_t idx){if(idx>=lyricFiles_.size())return;if(doc_&&doc_->Dirty()){if(MessageBoxW(hwnd_,L"Ungespeicherte Änderungen verwerfen?",L"Lyrics Editor",MB_YESNO|MB_ICONQUESTION)!=IDYES)return;}auto d=std::make_unique<LyricsDocument>();std::wstring err;fs::path inputRoot=lyricFiles_[idx].parent_path(); // source.file aus JSON hat Vorrang
+void App::SelectSong(size_t idx){if(idx>=lyricFiles_.size())return;if(doc_&&doc_->Dirty()){if(MessageBoxW(hwnd_,L"Ungespeicherte Änderungen verwerfen?",L"Lyrics Editor",MB_YESNO|MB_ICONQUESTION)!=IDYES)return;}latestLyricsPath_.reset();auto d=std::make_unique<LyricsDocument>();std::wstring err;fs::path inputRoot=lyricFiles_[idx].parent_path(); // source.file aus JSON hat Vorrang
     if(!d->Load(lyricFiles_[idx],inputRoot,err)){MessageBoxW(hwnd_,err.c_str(),L"Lyrics laden",MB_ICONERROR);return;}doc_=std::move(d);songIndex_=static_cast<int>(idx);segmentIndex_=-1;segmentScroll_=0;cursorSeconds_=0;audio_.Stop();ShowWindow(edit_,SW_HIDE);InvalidateRect(hwnd_,nullptr,FALSE);}
 void App::SelectSegment(size_t idx){if(!doc_||idx>=doc_->Segments().size())return;CommitEdit();segmentIndex_=static_cast<int>(idx);const auto&s=doc_->Segments()[idx];cursorSeconds_=s.start;SetWindowTextW(edit_,s.text.c_str());ShowWindow(edit_,SW_SHOW);UpdateEditPlacement();SetFocus(edit_);InvalidateRect(hwnd_,nullptr,FALSE);}
 void App::CommitEdit(){if(!doc_||segmentIndex_<0||segmentIndex_>=int(doc_->Segments().size()))return;int len=GetWindowTextLengthW(edit_);std::wstring t(static_cast<size_t>(len)+1,L'\0');GetWindowTextW(edit_,t.data(),len+1);t.resize(static_cast<size_t>(len));while(!t.empty()&&(t.back()==L'\r'||t.back()==L'\n'||t.back()==L' '))t.pop_back();auto&s=doc_->Segments()[segmentIndex_];if(t!=s.text){s.text=std::move(t);s.edited=true;}}

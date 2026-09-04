@@ -1,6 +1,6 @@
 # Klanggeist Lyrics Studio
 
-![Version](https://img.shields.io/badge/version-2.1.1-12c7ea)
+![Version](https://img.shields.io/badge/version-2.1.2-12c7ea)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4)
 ![License](https://img.shields.io/badge/license-MIT-6f42c1)
 
@@ -23,8 +23,8 @@ Die fertigen Pakete befinden sich unter [GitHub Releases](https://github.com/kru
 
 | Paket | Geeignet für | Verwendung |
 |---|---|---|
-| `KlanggeistLyricsStudio-2.1.1-portable.zip` | Ohne Installation, USB-Stick oder eigener Programmordner | ZIP entpacken und `KlanggeistLyricsStudio.exe` starten |
-| `KlanggeistLyricsStudio-2.1.1-x64.msi` | Reguläre Windows-Installation | MSI starten; Startmenü- und Desktop-Verknüpfung werden angelegt |
+| `KlanggeistLyricsStudio-2.1.2-portable.zip` | Ohne Installation, USB-Stick oder eigener Programmordner | ZIP entpacken und `KlanggeistLyricsStudio.exe` starten |
+| `KlanggeistLyricsStudio-2.1.2-x64.msi` | Reguläre Windows-Installation | MSI starten; Startmenü- und Desktop-Verknüpfung werden angelegt |
 | `Klanggeist-FFmpeg-8.0-git-b397eba2-source.zip` | Vollständiger Quellcode des mitgelieferten GPL-FFmpeg-Forks | Nur für Quellcodeprüfung oder eigenen FFmpeg-Build erforderlich |
 | `SHA256SUMS.txt` | Integritätsprüfung | SHA-256-Werte der Release-Dateien |
 
