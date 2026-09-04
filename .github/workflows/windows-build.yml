@@ -31,7 +31,9 @@ jobs:
 
       - name: WiX Toolset installieren
         shell: pwsh
-        run: dotnet tool install --global wix --version 7.0.0
+        # WiX 7 verlangt auf kurzlebigen CI-Runnern eine separate OSMF-EULA.
+        # Version 6.0.2 verarbeitet und validiert dieselbe WiX-v4-Paketdefinition.
+        run: dotnet tool install --global wix --version 6.0.2
 
       - name: Portable und MSI bauen
         shell: pwsh
